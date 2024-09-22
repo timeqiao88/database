@@ -1,0 +1,56 @@
+###configure readonly privilges scripts:
+#!/bin/bash
+
+DATABASE_NAMES=$(psql -U postgres -t -c “SELECT datname FROM pg_database WHERE datistemplate = false AND datname <> ‘postgres’;”)
+for DBNAME in $DATABASE_NAMES
+do
+    echo $DBNAME
+    psql $DBNAME -c \
+    "DO \$$
+    DECLARE
+        myschema RECORD;
+    BEGIN
+        GRANT CONNECT ON DATABASE $DBNAME TO readonly;
+        FOR myschema IN (SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT LIKE 'pg_%' AND schema_name <> 'information_schema')
+        LOOP
+            EXECUTE format ('GRANT USAGE ON SCHEMA %I TO readonly', myschema.schema_name);
+            EXECUTE format ('GRANT SELECT ON ALL TABLES IN SCHEMA %I TO readonly', myschema.schema_name);
+            EXECUTE format ('GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA %I TO readonly', myschema.schema_name);
+            EXECUTE format ('GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA %I TO readonly', myschema.schema_name);
+        END LOOP;
+        ALTER DEFAULT PRIVILEGES FOR ROLE postgres GRANT USAGE ON SCHEMAS TO readonly;
+        ALTER DEFAULT PRIVILEGES FOR ROLE postgres GRANT SELECT ON TABLES TO readonly;
+        ALTER DEFAULT PRIVILEGES FOR ROLE postgres GRANT USAGE, SELECT ON SEQUENCES TO readonly;
+        ALTER DEFAULT PRIVILEGES FOR ROLE postgres GRANT EXECUTE ON FUNCTIONS TO readonly;
+    END;
+    \$$ LANGUAGE plpgsql;"
+done
+
+
+#####configure read write scripts
+#!/bin/bash
+
+DATABASE_NAMES=$(psql -U postgres -t -c “SELECT datname FROM pg_database WHERE datistemplate = false AND datname <> ‘postgres’;”)
+for DBNAME in $DATABASE_NAMES
+do
+    echo $DBNAME
+    psql $DBNAME -c \
+    "DO \$$
+    DECLARE
+        myschema RECORD;
+    BEGIN
+        GRANT CONNECT, TEMP ON DATABASE $DBNAME TO rw_$DBNAME;
+        FOR myschema IN (SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT LIKE 'pg_%' AND schema_name <> 'information_schema')
+        LOOP
+            EXECUTE format ('GRANT USAGE ON SCHEMA %I TO rw_$DBNAME', myschema.schema_name);
+            EXECUTE format ('GRANT ALL ON ALL TABLES IN SCHEMA %I TO rw_$DBNAME', myschema.schema_name);
+            EXECUTE format ('GRANT ALL ON ALL SEQUENCES IN SCHEMA %I TO rw_$DBNAME', myschema.schema_name);
+            EXECUTE format ('GRANT ALL ON ALL FUNCTIONS IN SCHEMA %I TO rw_$DBNAME', myschema.schema_name);
+        END LOOP;
+        ALTER DEFAULT PRIVILEGES FOR ROLE postgres GRANT USAGE ON SCHEMAS TO rw_$DBNAME;
+        ALTER DEFAULT PRIVILEGES FOR ROLE postgres GRANT ALL ON TABLES TO rw_$DBNAME;
+        ALTER DEFAULT PRIVILEGES FOR ROLE postgres GRANT ALL ON SEQUENCES TO rw_$DBNAME;
+        ALTER DEFAULT PRIVILEGES FOR ROLE postgres GRANT ALL ON FUNCTIONS TO rw_$DBNAME;
+    END;
+    \$$ LANGUAGE plpgsql;"
+done
