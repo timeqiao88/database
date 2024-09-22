@@ -54,3 +54,30 @@ do
     END;
     \$$ LANGUAGE plpgsql;"
 done
+
+###revoke privilges 
+#!/bin/bash
+
+for DBNAME in "demo12" "demo34"
+do
+    echo $DBNAME
+    psql $DBNAME -c \
+    "DO \$$
+    DECLARE
+        myschema RECORD;
+    BEGIN
+        REVOKE ALL ON DATABASE $DBNAME FROM rw_$DBNAME;
+        FOR myschema IN (SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT LIKE 'pg_%' AND schema_name <> 'information_schema')
+        LOOP
+            EXECUTE format ('REVOKE ALL ON SCHEMA %I FROM rw_$DBNAME', myschema.schema_name);
+            EXECUTE format ('REVOKE ALL ON ALL TABLES IN SCHEMA %I FROM rw_$DBNAME', myschema.schema_name);
+            EXECUTE format ('REVOKE ALL ON ALL SEQUENCES IN SCHEMA %I FROM rw_$DBNAME', myschema.schema_name);
+            EXECUTE format ('REVOKE ALL ON ALL FUNCTIONS IN SCHEMA %I FROM rw_$DBNAME', myschema.schema_name);
+        END LOOP;
+        ALTER DEFAULT PRIVILEGES FOR ROLE postgres REVOKE ALL ON SCHEMAS FROM rw_$DBNAME;
+        ALTER DEFAULT PRIVILEGES FOR ROLE postgres REVOKE ALL ON TABLES FROM rw_$DBNAME;
+        ALTER DEFAULT PRIVILEGES FOR ROLE postgres REVOKE ALL ON SEQUENCES FROM rw_$DBNAME;
+        ALTER DEFAULT PRIVILEGES FOR ROLE postgres REVOKE ALL ON FUNCTIONS FROM rw_$DBNAME;
+    END;
+    \$$ LANGUAGE plpgsql;"
+done
