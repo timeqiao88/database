@@ -86,3 +86,44 @@ SELECT * FROM pg_stat_wal_receiver;
 32 | streaming | 0/3000000         |                 1 | 0/3000148   | 0/3000148   |            1 | 2024-12-30 08:31:53.202157+00 | 2024-12-30 08:31:53.20224+00 | 0/3000148      | 2024-12-30 08:23:52.126112+00 | replica1  | 192.168.10.10 |        5432 | 
 user=postgres password=******** channel_binding=prefer dbname=replication host=192.168.10.10 port=5432 application_name=replica1 fallback_application_name=walreceiver sslmode=prefer sslnegotiation=postgres sslcompression=0 sslcertmode=allow sslsni=1 ssl_mi
 n_protocol_version=TLSv1.2 gssencmode=prefer krbsrvname=postgres gssdelegation=0 target_session_attrs=any load_balance_hosts=disable
+
+17. add test table on primary and then check from the replica side: 
+[node1] (local) root@192.168.0.28 /tmp/base_backup
+$ psql -p 5532 -h 192.168.0.28 -U postgres
+psql (17.2, server 14.15 (Debian 14.15-1.pgdg120+1))
+Type "help" for help.
+
+postgres=# CREATE TABLE test_replication (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE
+postgres=# INSERT INTO test_replication (name) VALUES ('Replication Test 1'), ('Replication Test 2');
+INSERT 0 2
+postgres=# select * from test_replication;
+ id |        name        |         created_at         
+----+--------------------+----------------------------
+  1 | Replication Test 1 | 2024-12-30 09:04:57.734747
+  2 | Replication Test 2 | 2024-12-30 09:04:57.734747
+(2 rows)
+
+
+postgres=# exit
+[node1] (local) root@192.168.0.28 /tmp/base_backup
+$ 
+[node1] (local) root@192.168.0.28 /tmp/base_backup
+$ 
+[node1] (local) root@192.168.0.28 /tmp/base_backup
+$ psql -p 5533 -h 192.168.0.28 -U postgres
+psql (17.2, server 14.15 (Debian 14.15-1.pgdg120+1))
+Type "help" for help.
+
+postgres=# select * from test_replication;
+ id |        name        |         created_at         
+----+--------------------+----------------------------
+  1 | Replication Test 1 | 2024-12-30 09:04:57.734747
+  2 | Replication Test 2 | 2024-12-30 09:04:57.734747
+(2 rows)
+
+postgres=#
