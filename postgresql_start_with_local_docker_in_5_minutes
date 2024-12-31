@@ -1,0 +1,64 @@
+Step 1: Create Initialization Scripts
+
+mkdir -p postgres-init
+
+
+01-create_role.sh: Script to create a role in PostgreSQL.
+#!/bin/bash
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+  CREATE ROLE myrole WITH LOGIN PASSWORD 'mypassword';
+EOSQL
+
+
+02-create_table_schema_and_insert.sh: Script to create a schema or any other necessary database setup.
+#!/bin/bash
+set -e
+
+echo "Creating schema with a orders table"
+
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "postgres" <<-EOSQL
+ CREATE TABLE IF NOT EXISTS public.orders (
+     order_id SERIAL PRIMARY KEY,
+     customer_name VARCHAR(100) NOT NULL,
+     product_name VARCHAR(100) NOT NULL,
+     quantity INT NOT NULL,
+     order_date DATE NOT NULL
+ );
+
+ INSERT INTO public.orders (customer_name, product_name, quantity, order_date)
+ VALUES
+     ('Abhinav Anand', 'Macbook Pro', 1, '2024-01-15'),
+     ('Atarax', 'Smartphone', 2, '2024-01-20'),
+     ('Alex', 'Wireless Earbuds', 3, '2024-01-22'),
+     ('Tom', 'Tablet', 1, '2024-01-25'),
+     ('Virat', 'Laptop', 1, '2024-01-28'),
+     ('Rohit', 'Smartwatch', 2, '2024-02-01'),
+     ('Hardik', 'Laptop', 1, '2024-02-05'),
+     ('Jasprit', 'Smartphone', 1, '2024-02-10'),
+     ('Ravindra', 'Headphones', 2, '2024-02-15'),
+     ('Rishabh', 'Wireless Earbuds', 1, '2024-02-20');
+
+EOSQL
+
+Step 2: Create docker-compose.yml
+services:
+  db1:
+    image: postgres:17.0
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: dbpassword
+    ports:
+      - "5432:5432"
+    command: postgres -c 'max_connections=1000'
+    volumes:
+      - /c/Users/time_/postgres-init/01-create_role.sh:/docker-entrypoint-initdb.d/01-create_role.sh
+      - /c/Users/time_/postgres-init/02-create_table_schema_and_insert.sh:/docker-entrypoint-initdb.d/02-create_table_schema_and_insert.sh
+
+
+Step 3: Start the PostgreSQL Service
+docker-compose up -d
+
+
+
+
