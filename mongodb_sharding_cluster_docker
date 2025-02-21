@@ -1,0 +1,210 @@
+configsvr.yaml:
+
+version: '3'
+
+services:
+
+  cfgsvr1:
+    container_name: cfgsvr1
+    image: mongo
+    command: mongod --configsvr --replSet cfgrs --port 27017 --dbpath /data/db
+    ports:
+      - 40001:27017
+    volumes:
+      - cfgsvr1:/data/db
+
+  cfgsvr2:
+    container_name: cfgsvr2
+    image: mongo
+    command: mongod --configsvr --replSet cfgrs --port 27017 --dbpath /data/db
+    ports:
+      - 40002:27017
+    volumes:
+      - cfgsvr2:/data/db
+
+  cfgsvr3:
+    container_name: cfgsvr3
+    image: mongo
+    command: mongod --configsvr --replSet cfgrs --port 27017 --dbpath /data/db
+    ports:
+      - 40003:27017
+    volumes:
+      - cfgsvr3:/data/db
+
+volumes:
+  cfgsvr1: {}
+  cfgsvr2: {}
+  cfgsvr3: {}
+
+docker-compose -f configsvr.yaml up -d
+docker exec -it cfgsvr1 mongosh 172.24.0.2:27017
+
+rs.initiate(
+  {
+    _id: "cfgrs",
+    configsvr: true,
+    members: [
+      { _id : 0, host : "172.24.0.2:27017" },
+      { _id : 1, host : "172.24.0.3:27017" },
+      { _id : 2, host : "172.24.0.4:27017" }
+    ]
+  }
+)
+
+
+$ docker exec -it cfgsvr1 mongosh 172.24.0.2:27017
+Current Mongosh Log ID: 67b7cbe02732e25d45544ca6
+Connecting to:          mongodb://172.24.0.2:27017/?directConnection=true&appName=mongosh+2.3.8
+Using MongoDB:          8.0.4
+Using Mongosh:          2.3.8
+
+For mongosh info see: https://www.mongodb.com/docs/mongodb-shell/
+
+------
+   The server generated these startup warnings when booting
+   2025-02-21T00:14:33.644+00:00: Using the XFS filesystem is strongly recommended with the WiredTiger storage engine. See http://dochub.m
+ongodb.org/core/prodnotes-filesystem
+   2025-02-21T00:14:35.060+00:00: Access control is not enabled for the database. Read and write access to data and configuration is unres
+tricted
+   2025-02-21T00:14:35.060+00:00: For customers running the current memory allocator, we suggest changing the contents of the following sy
+sfsFile
+   2025-02-21T00:14:35.060+00:00: We suggest setting the contents of sysfsFile to 0.
+   2025-02-21T00:14:35.060+00:00: Your system has glibc support for rseq built in, which is not yet supported by tcmalloc-google and has c
+ritical performance implications. Please set the environment variable GLIBC_TUNABLES=glibc.pthread.rseq=0
+   2025-02-21T00:14:35.060+00:00: vm.max_map_count is too low
+   2025-02-21T00:14:35.060+00:00: We suggest setting swappiness to 0 or 1, as swapping can cause performance problems.
+------
+
+cfgrs [direct: primary] test> rs.status()
+{
+  set: 'cfgrs',
+  date: ISODate('2025-02-21T00:42:33.747Z'),
+  myState: 1,
+  term: Long('2'),
+  syncSourceHost: '',
+  syncSourceId: -1,
+  configsvr: true,
+  heartbeatIntervalMillis: Long('2000'),
+  majorityVoteCount: 2,
+  writeMajorityCount: 2,
+  votingMembersCount: 3,
+  writableVotingMembersCount: 3,
+  optimes: {
+    lastCommittedOpTime: { ts: Timestamp({ t: 1740098553, i: 1 }), t: Long('2') },
+    lastCommittedWallTime: ISODate('2025-02-21T00:42:33.305Z'),
+    readConcernMajorityOpTime: { ts: Timestamp({ t: 1740098553, i: 1 }), t: Long('2') },
+    appliedOpTime: { ts: Timestamp({ t: 1740098553, i: 1 }), t: Long('2') },
+    durableOpTime: { ts: Timestamp({ t: 1740098553, i: 1 }), t: Long('2') },
+    writtenOpTime: { ts: Timestamp({ t: 1740098553, i: 1 }), t: Long('2') },
+    lastAppliedWallTime: ISODate('2025-02-21T00:42:33.305Z'),
+    lastDurableWallTime: ISODate('2025-02-21T00:42:33.305Z'),
+    lastWrittenWallTime: ISODate('2025-02-21T00:42:33.305Z')
+  },
+  lastStableRecoveryTimestamp: Timestamp({ t: 1740098499, i: 1 }),
+  electionCandidateMetrics: {
+    lastElectionReason: 'electionTimeout',
+    lastElectionDate: ISODate('2025-02-21T00:14:45.534Z'),
+    electionTerm: Long('2'),
+    lastCommittedOpTimeAtElection: { ts: Timestamp({ t: 0, i: 0 }), t: Long('-1') },
+    lastSeenWrittenOpTimeAtElection: { ts: Timestamp({ t: 1740012436, i: 1 }), t: Long('1') },
+    lastSeenOpTimeAtElection: { ts: Timestamp({ t: 1740012436, i: 1 }), t: Long('1') },
+    numVotesNeeded: 2,
+    priorityAtElection: 1,
+    electionTimeoutMillis: Long('10000'),
+    numCatchUpOps: Long('0'),
+    newTermStartDate: ISODate('2025-02-21T00:14:45.570Z'),
+    wMajorityWriteAvailabilityDate: ISODate('2025-02-21T00:14:45.619Z')
+  },
+  members: [
+    {
+      _id: 0,
+      name: '172.24.0.2:27017',
+      health: 1,
+      state: 1,
+      stateStr: 'PRIMARY',
+      uptime: 1680,
+      optime: { ts: Timestamp({ t: 1740098553, i: 1 }), t: Long('2') },
+      optimeDate: ISODate('2025-02-21T00:42:33.000Z'),
+      optimeWritten: { ts: Timestamp({ t: 1740098553, i: 1 }), t: Long('2') },
+      optimeWrittenDate: ISODate('2025-02-21T00:42:33.000Z'),
+      lastAppliedWallTime: ISODate('2025-02-21T00:42:33.305Z'),
+      lastDurableWallTime: ISODate('2025-02-21T00:42:33.305Z'),
+      lastWrittenWallTime: ISODate('2025-02-21T00:42:33.305Z'),
+      syncSourceHost: '',
+      syncSourceId: -1,
+      infoMessage: '',
+      electionTime: Timestamp({ t: 1740096885, i: 1 }),
+      electionDate: ISODate('2025-02-21T00:14:45.000Z'),
+      configVersion: 1,
+      configTerm: 2,
+      self: true,
+      lastHeartbeatMessage: ''
+    },
+    {
+      _id: 1,
+      name: '172.24.0.3:27017',
+      health: 1,
+      state: 2,
+      stateStr: 'SECONDARY',
+      uptime: 1678,
+      optime: { ts: Timestamp({ t: 1740098552, i: 1 }), t: Long('2') },
+      optimeDurable: { ts: Timestamp({ t: 1740098552, i: 1 }), t: Long('2') },
+      optimeWritten: { ts: Timestamp({ t: 1740098552, i: 1 }), t: Long('2') },
+      optimeDate: ISODate('2025-02-21T00:42:32.000Z'),
+      optimeDurableDate: ISODate('2025-02-21T00:42:32.000Z'),
+      optimeWrittenDate: ISODate('2025-02-21T00:42:32.000Z'),
+      lastAppliedWallTime: ISODate('2025-02-21T00:42:33.305Z'),
+      lastDurableWallTime: ISODate('2025-02-21T00:42:33.305Z'),
+      lastWrittenWallTime: ISODate('2025-02-21T00:42:33.305Z'),
+      lastHeartbeat: ISODate('2025-02-21T00:42:32.403Z'),
+      lastHeartbeatRecv: ISODate('2025-02-21T00:42:32.931Z'),
+      pingMs: Long('0'),
+      lastHeartbeatMessage: '',
+      syncSourceHost: '172.24.0.2:27017',
+      syncSourceId: 0,
+      infoMessage: '',
+      configVersion: 1,
+      configTerm: 2
+    },
+    {
+      _id: 2,
+      name: '172.24.0.4:27017',
+      health: 1,
+      state: 2,
+      stateStr: 'SECONDARY',
+      uptime: 1678,
+      optime: { ts: Timestamp({ t: 1740098552, i: 1 }), t: Long('2') },
+      optimeDurable: { ts: Timestamp({ t: 1740098552, i: 1 }), t: Long('2') },
+      optimeWritten: { ts: Timestamp({ t: 1740098552, i: 1 }), t: Long('2') },
+      optimeDate: ISODate('2025-02-21T00:42:32.000Z'),
+      optimeDurableDate: ISODate('2025-02-21T00:42:32.000Z'),
+      optimeWrittenDate: ISODate('2025-02-21T00:42:32.000Z'),
+      lastAppliedWallTime: ISODate('2025-02-21T00:42:33.305Z'),
+      lastDurableWallTime: ISODate('2025-02-21T00:42:33.305Z'),
+      lastWrittenWallTime: ISODate('2025-02-21T00:42:33.305Z'),
+      lastHeartbeat: ISODate('2025-02-21T00:42:32.397Z'),
+      lastHeartbeatRecv: ISODate('2025-02-21T00:42:32.972Z'),
+      pingMs: Long('0'),
+      lastHeartbeatMessage: '',
+      syncSourceHost: '172.24.0.2:27017',
+      syncSourceId: 0,
+      infoMessage: '',
+      configVersion: 1,
+      configTerm: 2
+    }
+  ],
+  ok: 1,
+  '$clusterTime': {
+    clusterTime: Timestamp({ t: 1740098553, i: 1 }),
+    signature: {
+      hash: Binary.createFromBase64('AAAAAAAAAAAAAAAAAAAAAAAAAAA=', 0),
+      keyId: Long('0')
+    }
+  },
+  operationTime: Timestamp({ t: 1740098553, i: 1 })
+}
+cfgrs [direct: primary] test>
+
+
+
+
